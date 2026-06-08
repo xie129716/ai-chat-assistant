@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Chat - Dify Powered</title>
+<style>
+  :root {
+    --bg-deep: #0a0a0f;
+    --bg-card: rgba(16, 16, 32, 0.85);
+    --accent-cyan: #00f0ff;
+    --accent-magenta: #ff00e5;
+    --accent-purple: #7b2fff;
+    --accent-blue: #0066ff;
+    --text-primary: #e0e0f0;
+    --text-secondary: #8888aa;
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glow-cyan: 0 0 20px rgba(0, 240, 255, 0.3), 0 0 60px rgba(0, 240, 255, 0.1);
+    --glow-magenta: 0 0 20px rgba(255, 0, 229, 0.3), 0 0 60px rgba(255, 0, 229, 0.1);
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    --font-sans: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-deep);
+    font-family: var(--font-sans);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ===== Canvas Particle Background ===== */
+  #particleCanvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* ===== Ambient Glow Orbs ===== */
+  .ambient-orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.15;
+    z-index: 0;
+    pointer-events: none;
+    animation: orbFloat 20s ease-in-out infinite;
+  }
+  .orb-1 {
+    width: 500px; height: 500px;
+    background: var(--accent-cyan);
+    top: -150px; left: -100px;
+    animation-delay: 0s;
+  }
+  .orb-2 {
+    width: 400px; height: 400px;
+    background: var(--accent-magenta);
+    bottom: -120px; right: -80px;
+    animation-delay: -7s;
+  }
+  .orb-3 {
+    width: 350px; height: 350px;
+    background: var(--accent-purple);
+    top: 40%; left: 60%;
+    animation-delay: -13s;
+  }
+  @keyframes orbFloat {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    25% { transform: translate(40px, -30px) scale(1.15); }
+    50% { transform: translate(-20px, 40px) scale(0.9); }
+    75% { transform: translate(-35px, -20px) scale(1.1); }
+  }
+
+  /* ===== Grid Background ===== */
+  .grid-bg {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(0,240,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,240,255,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    animation: gridPulse 8s ease-in-out infinite;
+  }
+  @keyframes gridPulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+
+  /* ===== Main Container ===== */
+  .main-container {
+    position: relative;
+    z-index: 1;
+    width: 95vw;
+    max-width: 1200px;
+    height: 90vh;
+    max-height: 900px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* ===== Header ===== */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 28px;
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-cyan), var(--accent-magenta), transparent);
+    animation: scanLine 3s ease-in-out infinite;
+  }
+  @keyframes scanLine {
+    0%, 100% { opacity: 0.3; transform: translateX(-100%); }
+    50% { opacity: 1; transform: translateX(100%); }
+  }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .logo-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    box-shadow: var(--glow-cyan);
+    animation: logoPulse 2s ease-in-out infinite;
+  }
+  @keyframes logoPulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(0,240,255,0.4), 0 0 60px rgba(0,240,255,0.1); }
+    50% { box-shadow: 0 0 35px rgba(0,240,255,0.7), 0 0 80px rgba(0,240,255,0.2); }
+  }
+  .header-title {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    background: linear-gradient(135deg, var(--accent-cyan), #a0e0ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header-subtitle {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #00ff88;
+    box-shadow: 0 0 10px #00ff88, 0 0 20px rgba(0,255,136,0.4);
+    animation: statusBlink 2s ease-in-out infinite;
+  }
+  @keyframes statusBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .status-text {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+  }
+  .model-badge {
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: rgba(0,240,255,0.08);
+    border: 1px solid rgba(0,240,255,0.2);
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--accent-cyan);
+    letter-spacing: 0.5px;
+  }
+
+  /* ===== Chat Wrapper ===== */
+  .chat-wrapper {
+    flex: 1;
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+    box-shadow:
+      0 0 40px rgba(0,240,255,0.05),
+      inset 0 0 60px rgba(0,240,255,0.02);
+    transition: box-shadow 0.5s ease;
+  }
+  .chat-wrapper:hover {
+    box-shadow:
+      0 0 60px rgba(0,240,255,0.08),
+      0 0 100px rgba(123,47,255,0.04),
+      inset 0 0 60px rgba(0,240,255,0.03);
+  }
+  .chat-wrapper iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+  }
+
+  /* ===== Corner Decorations ===== */
+  .corner-decor {
+    position: absolute;
+    width: 30px; height: 30px;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .corner-decor::before,
+  .corner-decor::after {
+    content: '';
+    position: absolute;
+    background: var(--accent-cyan);
+  }
+  .corner-tl { top: 8px; left: 8px; }
+  .corner-tr { top: 8px; right: 8px; }
+  .corner-bl { bottom: 8px; left: 8px; }
+  .corner-br { bottom: 8px; right: 8px; }
+  .corner-tl::before { top: 0; left: 0; width: 14px; height: 1px; }
+  .corner-tl::after { top: 0; left: 0; width: 1px; height: 14px; }
+  .corner-tr::before { top: 0; right: 0; width: 14px; height: 1px; }
+  .corner-tr::after { top: 0; right: 0; width: 1px; height: 14px; }
+  .corner-bl::before { bottom: 0; left: 0; width: 14px; height: 1px; }
+  .corner-bl::after { bottom: 0; left: 0; width: 1px; height: 14px; }
+  .corner-br::before { bottom: 0; right: 0; width: 14px; height: 1px; }
+  .corner-br::after { bottom: 0; right: 0; width: 1px; height: 14px; }
+
+  /* ===== Footer ===== */
+  .footer {
+    text-align: center;
+    padding: 8px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    letter-spacing: 1px;
+    opacity: 0.6;
+  }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 768px) {
+    .main-container {
+      width: 100vw;
+      height: 100vh;
+      max-height: 100vh;
+      gap: 10px;
+      padding: 8px;
+    }
+    .header {
+      padding: 12px 16px;
+      border-radius: 14px;
+    }
+    .header-title { font-size: 16px; }
+    .chat-wrapper { border-radius: 14px; }
+    .model-badge { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Ambient Glow Orbs -->
+<div class="ambient-orb orb-1"></div>
+<div class="ambient-orb orb-2"></div>
+<div class="ambient-orb orb-3"></div>
+
+<!-- Grid Background -->
+<div class="grid-bg"></div>
+
+<!-- Particle Canvas -->
+<canvas id="particleCanvas"></canvas>
+
+<!-- Main Container -->
+<div class="main-container">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="logo-icon">&#x2726;</div>
+      <div>
+        <div class="header-title">AI Assistant</div>
+        <div class="header-subtitle">Powered by Dify + Ollama</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="status-dot"></span>
+      <span class="status-text">ONLINE</span>
+      <span class="model-badge">qwen3.5:0.8b</span>
+    </div>
+  </div>
+
+  <!-- Chat Iframe -->
+  <div class="chat-wrapper" id="chatWrapper">
+    <div class="corner-decor corner-tl"></div>
+    <div class="corner-decor corner-tr"></div>
+    <div class="corner-decor corner-bl"></div>
+    <div class="corner-decor corner-br"></div>
+    <iframe
+      src="http://127.0.0.1/chatbot/fjHgG9vNKyclDqzn"
+      allow="microphone"
+      loading="lazy">
+    </iframe>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">LOCAL INFERENCE &bull; RTX 3060 &bull; QWEN 3.5</div>
+</div>
+
+<script>
+(function() {
+  const canvas = document.getElementById('particleCanvas');
+  const ctx = canvas.getContext('2d');
+  let w, h, particles = [];
+
+  function resize() {
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Particle class
+  class Particle {
+    constructor() {
+      this.reset();
+      this.y = Math.random() * h;
+    }
+    reset() {
+      this.x = Math.random() * w;
+      this.y = -10;
+      this.size = Math.random() * 2 + 0.5;
+      this.speedY = Math.random() * 0.6 + 0.2;
+      this.speedX = (Math.random() - 0.5) * 0.3;
+      this.opacity = Math.random() * 0.6 + 0.2;
+      this.hue = Math.random() > 0.5 ? 185 : 290; // cyan or purple
+    }
+    update() {
+      this.y += this.speedY;
+      this.x += this.speedX;
+      if (this.y > h + 10 || this.x < -10 || this.x > w + 10) {
+        this.reset();
+        this.y = -10;
+      }
+    }
+    draw() {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${this.hue}, 100%, 70%, ${this.opacity})`;
+      ctx.fill();
+    }
+  }
+
+  // Initialize particles
+  const particleCount = Math.min(Math.floor((w * h) / 12000), 120);
+  for (let i = 0; i < particleCount; i++) {
+    particles.push(new Particle());
+  }
+
+  function animate() {
+    ctx.clearRect(0, 0, w, h);
+    particles.forEach(p => { p.update(); p.draw(); });
+
+    // Draw connections between nearby particles
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 120) {
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          const alpha = (1 - dist / 120) * 0.08;
+          ctx.strokeStyle = `rgba(0, 240, 255, ${alpha})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+
+  // Adjust particles on resize
+  window.addEventListener('resize', () => {
+    resize();
+    const newCount = Math.min(Math.floor((w * h) / 12000), 120);
+    while (particles.length < newCount) particles.push(new Particle());
+    while (particles.length > newCount) particles.pop();
+  });
+})();
+</script>
+</body>
+</html>
